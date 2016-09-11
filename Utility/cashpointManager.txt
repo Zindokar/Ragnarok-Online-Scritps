@@ -6,7 +6,7 @@
 // * Notify the player if an admin has added/deleted some cash to you.
 // * If the player is online it will tell which GM did.
 // * If the player is NOT online will show a notification when logged in but will not tell the GM who did it.
-// * Logs system. Must be 'log_npc: true' in conf/map/logs.con file.
+// * Logs system. Must be 'log_npc: true' in conf/map/logs.conf file.
 //   -> If somebody put wrong password in whisp system.
 //   -> If add/delete cash points.
 // ---
