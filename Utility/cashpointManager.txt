@@ -16,7 +16,7 @@
 // * Recycled this old script and adapted to Hercules database
 // * Transtaled to English
 // ---
--	script	donations	-1,{
+-	script	donations	FAKE_NPC,{
 OnWhisperGlobal:
 if (getgmlevel() < 90) { // If you are not admin just tell you how many cash you have.
 	dispbottom "Your have: [" + #CASHPOINTS + "] CashPoints.";
