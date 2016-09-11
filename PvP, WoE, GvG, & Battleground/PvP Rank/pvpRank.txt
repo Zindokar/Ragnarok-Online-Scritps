@@ -1,0 +1,85 @@
+// ------------------------------------------------
+// Custom PvP Rank [SQL Version] v1.0
+// ------------------------------------------------
+// Developed by Rokimoki for Hercules.
+// ------------------------------------------------
+// * PvP Warp, random location warp.
+// * PvP Rank, 1 kill = 1 point.
+// * Waiting room that tells current players in PvP Map.
+// ------------------------------------------------
+// pvp warp script
+prontera,165,168,0	script	PvP Warp	WARPNPC,2,2,{
+end;
+OnTouch:
+	switch (rand(1,5)) {
+		case 1: // Left
+			warp "pvp_n_1-5", 65, 99;
+			break;
+			
+		case 2: // Bottom
+			warp "pvp_n_1-5", 99, 65;
+			break;
+			
+		case 3: // Right
+			warp "pvp_n_1-5", 134, 100;
+			break;
+			
+		case 4: // Top
+			warp "pvp_n_1-5", 100, 134;
+			break;
+			
+		case 5: // Random
+			warp "pvp_n_1-5", 0, 0;
+			break;
+	} // End switch
+end;
+} // End Script
+
+// map flags
+pvp_n_1-5	mapflag	nopenalty
+pvp_n_1-5	mapflag	loadevent
+
+// pvp rank script
+prontera,165,168,3	script	PvP Rank#PvP::PvPW	2_BULLETIN_BOARD,{
+	mes "[^FF0000PvP Rank^000000]";
+	cleararray .@players$[0], "", 10; // defining 10 positions
+	cleararray .@kill_count[0], 0, 10;
+	query_sql("SELECT ch.name, pvp.kill_count FROM `char` as ch JOIN `custom_pvprank` as pvp WHERE ch.char_id = pvp.char_id ORDER BY pvp.kill_count DESC LIMIT 10;", .@players$, .@kill_count);
+	for (.@i = 0; .@i < 10; .@i++) {
+		if (strcmp(.@players$[.@i], "") == 0) break; // if some is empty, stop printing
+		mes (.@i + 1) + ".- ^0000FF" + .@players$[.@i] + "^000000 with: ^FF0000" + .@kill_count[.@i] + "^000000 kills.";
+	}
+close;
+
+OnPCKillEvent:
+	getmapxy(.@map$,.@x,.@y,0);
+	if (.@map$ != "pvp_n_1-5") end;
+	if (rid2name(killedrid) == strcharinfo(0)) { // prevent suicide for gaining points
+		mapannounce .@map$, "Player [" + strcharinfo(0) + "] commited suicide.", bc_blue;
+	} else {
+		mapannounce .@map$, "Player [" + strcharinfo(0) + "] killed [" + rid2name(killedrid) + "]", bc_blue;
+		kill_count++;
+		query_sql("SELECT `char_id` FROM `custom_pvprank` WHERE `char_id` = " + getcharid(0) + ";", .@flag[0]);
+		if (!.@flag[0]) { // create kill_count
+			query_sql("INSERT INTO `custom_pvprank` (char_id, kill_count) VALUES ('" + getcharid(0) + "','" + kill_count + "');");
+		} else { // update kill_count
+			query_sql("UPDATE `custom_pvprank` SET `kill_count` = " + kill_count + ";");
+		}
+	} // End if
+end;
+
+OnPCLoadMapEvent:
+	getmapxy (.@map$,.@x,.@y,0);
+	if (.@map$ != "pvp_n_1-5") end;
+	dispbottom "[PvP Rank]: You have " + kill_count +" PvP points.";
+end;
+
+OnInit:
+	query_sql("CREATE TABLE IF NOT EXISTS custom_pvprank(char_id INTEGER UNSIGNED NOT NULL, kill_count INTEGER UNSIGNED NULL, PRIMARY KEY(char_id));"); // create the table
+	do {
+		delwaitingroom;
+		waitingroom "PvP [" +getmapusers("pvp_n_1-5") +" players]",0;
+		sleep 50;
+	} while(1); // End Loop
+end;
+} // End Script
