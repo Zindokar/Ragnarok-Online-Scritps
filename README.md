@@ -7,7 +7,7 @@ Ragnarok Online scripts for Hercules emulator (or compatible)
 
 ## PvP, WoE, GvG, & Battleground Releases:
 
-- none yet
+- Rank PvP: this is a sql version, you will find a waiting room with current player in pvp map and a rank ladder, default limited to 10 players.
 
 ## Event & Game Releases:
 
