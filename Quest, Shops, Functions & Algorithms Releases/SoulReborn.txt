@@ -1,0 +1,97 @@
+// ==================================================
+// Developed by @Rokimoki for Elaria Woon Reloaded
+//            - Soul Sacrifice NPC -
+// ==================================================
+moc_para01,19,19,4	script	Soul Sacrifice	4_M_MOCASS1,{
+	.@rewardItemId = 4140; // item id for reward, must be etc item or usable
+	.@rewardItemQ = 1; // quantity for item id reward
+	.@npcname$ = "^000099[ Soul Sacrifice ]^000000"; // NPC Name
+	mes .@npcname$;
+	if (eaclass() & EAJL_UPPER) {
+		mes "Your soul... That is all I want.";
+		mes "However only reborned and maxed out souls please me.";
+		next;
+		mes .@npcname$;
+		mes "I can delete your maxed out character in exchange for a soul item.";
+		next;
+		switch(select(
+				"Transform My Soul",
+				"Nothing")) {
+			case 1:
+				mes .@npcname$;
+				if (BaseLevel == 99 && JobLevel == 70) {
+					mes "You have to store all your items and you must have 0 Zeny.";
+					mes "^ff0000Your character will be deleted!^000000";
+					mes "A character soul will be sent to another character of your choice.";
+					mes "Do you wish to proceed?";
+					next;
+					switch(select("Sure", "No...")) {
+						case 1:
+							mes .@npcname$;
+							if (checkcart()) {
+								mes "You must remove your cart.";
+								close;
+							}
+							getinventorylist();
+							if (getarraysize(@inventorylist_count) > 0) {
+								mes "You still have items in your inventory.!";
+								close;
+							}
+							if (Zeny != 0) {
+								mes "You have some zeny in your pocket.!";
+								close;
+							}
+							mes "Okay... I can extract your soul from your character, are you sure?";
+							mes "^ff0000Your character will be deleted!^000000";
+							mes "Your soul item will be sent to the package claim NPC in prontera.";
+							next;
+							switch(select("Yes, c'mon!", "No...")) {
+								case 1:
+									do {
+										mes .@npcname$;
+										mes "Select a character from your account to send the Soul!";
+										next;
+										query_sql("SELECT `name` FROM `char` WHERE `account_id` = '" + getcharid(3) + "' ORDER BY `name` ASC", .@charListName$);
+										.@selectedChar = select(implode(.@charListName$, ":"));
+										mes .@npcname$;
+										if (strcmp(strtoupper(strcharinfo(0)), strtoupper(.@charListName$[.@selectedChar - 1])) == 0) {
+											mes "You can't send the soul to yourself, ^FF0000select another character^000000.";
+											close;
+										}
+										mes "Do you want to send the soul to: ^FF0000" + .@charListName$[.@selectedChar - 1] + "^000000?";
+										next;
+									} while (select("Yes!", "No") != 1);
+									mes .@npcname$;
+									mes "Okay, you will regret this... !";
+									.@charDestination$ = .@charListName$[.@selectedChar - 1];
+									.@charid = getcharid(0);
+									.@accid = getcharid(3);
+									.@charname$ = strcharinfo(0);
+									.@jobid = Class;
+									close2;
+									atcommand ("@kick " + .@charname$);
+									query_sql("DELETE FROM `char` WHERE `char_id` = '" + .@charid + "'");
+									query_sql("INSERT INTO `inventory`(`char_id`, `nameid`, `amount`, `equip`, `identify`, `refine`, `attribute`, `card0`, `card1`, `card2`, `card3`, `expire_time`, `favorite`, `bound`, `unique_id`) VALUES (" + .@selectedChar + "," + .@rewardItemId + "," + .@rewardItemQ + ",0,1,0,0,0,0,0,0,0,0,0,0)");
+									logmes("Character: " + .@charname$ + ", with account id: " + .@accid + " and char id: " + .@charid + " with character's job: " + .@jobid + " used Soul Sacrifice script.");
+									end;
+								default:
+									break;
+							}
+						default:
+							break;
+					}
+				} else {
+					mes "Go away~ !";
+				}
+				break;
+
+			default:
+				mes .@npcname$;
+				mes "Good bye.";
+				break;
+		}
+	} else {
+		mes "You must be a reborned maxed out character to use my services.";
+	}
+	close;
+}

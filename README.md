@@ -15,4 +15,6 @@ Ragnarok Online scripts for Hercules emulator (or compatible)
 
 ## Quest, Shops, Functions & Algorithms Releases:
 
-- none yet
+[I did for Elaria Woon Reloaded Server]
+- Soul Reborn: (PreRenewal) You must be advanced class 99/70, then you delete your character for a unique special item (you must have another character in the account to receive the reward).
+- Bloody Branch Quest: A quest where you can get Bloody Branch as reward, but this is very configurable, the items given and items expected for the quest. This NPC appears only in certain a random certain map in a determined and limited time.

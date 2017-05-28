@@ -1,0 +1,158 @@
+// ==================================================
+// Developed by @Rokimoki for Elaria Woon Reloaded
+//            - Soul Sacrifice NPC -
+// ==================================================
+-	script	Bloody Guy	FAKE_NPC,{
+	.@npcName$ = "[^c77978Bloody Guy^000000]";
+	mes .@npcName$;
+	if (.npcCurrentUses == .npcUses || !.activated) {
+		mes "Oh, I'm tired...";
+		close;
+	}
+	mes "Are you ready for a nightmare?";
+	next;
+	if (select("Yes","No") == 2) {
+		mes .@npcName$;
+		mes "Alright!";
+		close;
+	}
+	mes .@npcName$;
+	mes "You need to bring me these items: ";
+	for (.@i = 0; .@i < getarraysize(.itemListbb); .@i++) {
+		mes "^8a2be2" + getitemname(.itemListbb[.@i]) + " " + .itemAmountbb[.@i] + "ea^000000";
+	}
+	mes "^a3211f" + .zenyNeeded + " Zeny^000000";
+	next;
+	switch (select("Okay","Why?","Nope!")) {
+		case 1:
+			break;
+			
+		case 2:
+			mes .@npcName$;
+			mes "Well... do you want a Bloody Branch maybe?";
+			close;
+			
+		default:
+			mes .@npcName$;
+			mes "Alright!";
+			close;
+	}
+	mes .@npcName$;
+	mes "Let's check it out!";
+	next;
+	// First we check if he had enough items
+	mes .@npcName$;
+	if  (Zeny < .zenyNeeded) {
+		mes "You don't have enough Zeny!";
+		close;
+	}
+	for (.@i = 0; .@i < getarraysize(.itemListbb); .@i++) {
+		if (countitem(.itemListbb[.@i]) < .itemAmountbb[.@i]) {
+			mes "It seems that you don't hold enough items...";
+			close;
+		}
+	}
+	// Extra check if the user regret...
+	mes "You have the requirements to get the item";
+	next;
+	if (select("Give it to me!","Meh~") == 2) {
+		mes .@npcName$;
+		mes "Alright!";
+		close;
+	}
+	// If he has enough items we delte them
+	mes .@npcName$;
+	Zeny -= .zenyNeeded;
+	for (.@i = 0; .@i < getarraysize(.itemListbb); .@i++) {
+		delitem .itemListbb[.@i], .itemAmountbb[.@i];
+	}
+	mes "Yeah, you completed the quest! congrats...";
+	// here starts the reward section
+	getitem 12103, 1; // 1 bloody branch
+	.npcCurrentUses++;
+	close;
+	
+	// ============== ENABLE NPC ==============
+	OnClock1930: // At 19:30 server time
+		if (gettime(GETTIME_WEEKDAY) == MONDAY || gettime(GETTIME_WEEKDAY) == TUESDAY && !.activated) {
+			.activated = 1;
+			announce ("Bloody Branch Quest Start", bc_all);
+			// Monday and wednesday
+			.randMap = rand(getarraysize(.mapListBB$));
+			enablenpc("bb" + .mapListBB$[.randMap]);
+			.npcCurrentUses = 0;
+		}
+	end;
+	
+	OnClock1030: // At 10:30 server time
+		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY && !.activated) {
+			.activated = 1;
+			announce ("Bloody Branch Quest Start", bc_all);
+			// Weekend
+			.randMap = rand(getarraysize(.mapListBB$));
+			enablenpc("bb" + .mapListBB$[.randMap]);
+			.npcCurrentUses = 0;
+		}
+	end;
+	
+	// ============== DISABLE NPC, after 4 hours ==============
+	OnClock2350: // At 23:50 server time
+		if (gettime(GETTIME_WEEKDAY) == MONDAY || gettime(GETTIME_WEEKDAY) == TUESDAY && .activated) {
+			.activated = 0;
+			announce ("Bloody Branch Quest Stop", bc_all);
+			// Monday and wednesday, disable all npcs, we can store the current npc enabled but better disabling all
+			for (.i = 0; .i < getarraysize(.mapListBB$); .i++) {
+				disablenpc("bb" + .mapListBB$[.i]);
+			}
+			
+		}
+	end;
+	
+	OnClock1430: // At 14:30 server time
+		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY && .activated) {
+			.activated = 0;
+			announce ("Bloody Branch Quest Stop", bc_all);
+			debugmes "wrong deactivation";
+			// Weekend, we can store the current npc enabled but better disabling all
+			for (.i = 0; .i < getarraysize(.mapListBB$); .i++) {
+				disablenpc("bb" + .mapListBB$[.i]);
+			}
+		}
+	end;
+	
+	// ============== NPC CONFIGURATION ==============
+	OnInit:
+		.npcUses = 10; // How many times per spawn can be used
+		.npcCurrentUses = 0; // Don't touch this
+		.activated = 0; // Don't touch this
+		// Write the map list used in duplicate npcs, in the same order
+		setarray(.mapListBB$[0],
+					"prontera",
+					"payon",
+					"geffen"
+				);
+		// Disable all npcs by default
+		for (.@i = 0; .@i < getarraysize(.mapListBB$); .@i++) {
+			disablenpc("bb" + .mapListBB$[.@i]);
+		}
+		// item list needed
+		setarray(.itemListbb[0],
+					4001,
+					4033,
+					656
+				);
+		setarray(.itemAmountbb[0],
+					10,
+					5,
+					2
+				);
+		.zenyNeeded = 1000000;
+	end;
+}
+
+/*
+ * Write down the duplicates npc, write ::bbmap after script name
+*/
+prontera,166,198,4	duplicate(Bloody Guy)	Bloody Guy::bbprontera	4_M_ROKI
+payon,166,231,4	duplicate(Bloody Guy)	Bloody Guy::bbpayon	4_M_ROKI
+geffen,124,73,4	duplicate(Bloody Guy)	Bloody Guy::bbgeffen	4_M_ROKI
