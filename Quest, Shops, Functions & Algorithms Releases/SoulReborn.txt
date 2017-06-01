@@ -43,7 +43,7 @@ moc_para01,19,19,4	script	Soul Sacrifice	4_M_MOCASS1,{
 							}
 							mes "Okay... I can extract your soul from your character, are you sure?";
 							mes "^ff0000Your character will be deleted!^000000";
-							mes "Your soul item will be sent to the package claim NPC in prontera.";
+							mes "Your soul item will be sent to the selected character from your account.";
 							next;
 							switch(select("Yes, c'mon!", "No...")) {
 								case 1:
