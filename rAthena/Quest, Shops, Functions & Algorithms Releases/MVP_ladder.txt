@@ -1,0 +1,264 @@
+//====== rAthena Script ======================================================
+//= MVP ladder script
+//===== By: ==================================================================
+//= Rokimoki but edited and adapted from AnnieRuru PVP Ladder
+//= https://herc.ws/board/topic/18871-dota-pvp-ladder/
+//= Mark Script fixed and adapted some small things
+//===== Current Version: =====================================================
+//= 2.0
+//===== Compatible With: =====================================================
+//= rAthena 2020-10-20, with MySQL 8.0
+//===== Description: =========================================================
+//= MVP ladder store in SQL table
+//= Requested by DevThor
+//===== Additional Comments: =================================================
+//= 1.0 initial version
+//= 2.0 added total kill count and fixed some sql bugs
+//============================================================================
+
+/*
+CREATE TABLE `mvpladder` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`char_id` int(11) unsigned NOT NULL default '0',
+	`mob_id` INT NOT NULL,
+	`kills` INT DEFAULT 0,
+  	PRIMARY KEY (`id`),
+	INDEX (`char_id`),
+	INDEX (`mob_id`),
+	INDEX (`kills`)
+) ENGINE=MyISAM AUTO_INCREMENT=1;
+*/
+
+//---- MvP Ladder Logic Script
+
+-	script	MVPLadder	-1,{
+
+OnInit:
+// Config
+	.map_killannounce = 1; // announce when MVP is dead on the map where the MVP was killed : 0 - off, 1 - o
+	.killannounce = 1; // announce when MVP is dead globally : 0 - off, 1 - on
+	.gmnokill = 0; // GMs are not suppose to kill MVP. A GM with <this number> level or higher will do nothing. IF set to 60, GM60 and above kill any player will not get anything : 0 - off
+
+//	.min_gm_menu = 90; // minimum level of GM can use the GM menu on ladder npc
+
+	.showtotal = 20; // show the length of ladder.
+	.showpage = 10;	// set the views per page.
+
+	.showstatue = 5; // number of statues. This number must match with the number of duplicates at the end of the script
+	.fix_custom_sprite = false; // if your server has custom animated sprite that overlaps the sprite animation repeatedly on the statues, enable this
+
+// Config ends ------------------------------------------------------------------------------------------
+
+//	to prevent bug happen
+	if (.gmnokill <= 0) .gmnokill = 100;
+
+	sleep 1;
+	
+OnTimer1000: // refresh statues every 30 seconds. Note the `char` table is unrealiable, player still need to perform certain task to save the character -> see 'save_settings' in conf\map-server.conf
+	.@query$ = "SELECT `char`.`char_id`, `char`.`name`, `char`.`guild_id`, `char`.`class`,"
+			 + "`char`.`sex`, `char`.`hair`, `char`.`hair_color`, `char`.`clothes_color`,"
+			 + "`char`.`body`, `char`.`head_top`, `char`.`head_mid`, `char`.`head_bottom`, `char`.`robe`,"
+	         + "SUM(`mvpladder`.`kills`)"
+	         + "FROM `char` RIGHT JOIN `mvpladder` ON `char`.`char_id` = `mvpladder`.`char_id` GROUP BY `char`.`char_id` ORDER BY `kills` DESC LIMIT "+ .showstatue;
+	.@nb = query_sql(.@query$, .@cid, .@name$, .@guild_id, .@class, .@sex$, .@hair, .@hair_color, .@clothes_color, .@body, .@head_top, .@head_mid, .@head_bottom, .@robe, .@kills);
+	if (.fix_custom_sprite) {
+		for (.@i = 0; .@i < .@nb; ++.@i) {
+			setunitdata .statue[.@i +1], UNPC_HEADTOP, 0;
+			setunitdata .statue[.@i +1], UNPC_HEADMIDDLE, 0;
+			setunitdata .statue[.@i +1], UNPC_HEADBOTTOM, 0;
+			setunitdata .statue[.@i +1], UNPC_ROBE, 0;
+		}
+	}
+	for (.@i = 0; .@i < .@nb; ++.@i) {
+		setunitdata .statue[.@i +1], UNPC_CLASS, .@class[.@i];
+		setunitdata .statue[.@i +1], UNPC_SEX, (.@sex$[.@i] == "F")? SEX_FEMALE:SEX_MALE;
+		setunitdata .statue[.@i +1], UNPC_HAIRSTYLE, .@hair[.@i];
+		setunitdata .statue[.@i +1], UNPC_HAIRCOLOR, .@hair_color[.@i];
+		setunitdata .statue[.@i +1], UNPC_CLOTHCOLOR, .@clothes_color[.@i];
+		setunitdata .statue[.@i +1], UNPC_BODY2, .@body[.@i];
+		setunitdata .statue[.@i +1], UNPC_HEADTOP, .@head_top[.@i];
+		setunitdata .statue[.@i +1], UNPC_HEADMIDDLE, .@head_mid[.@i];
+		setunitdata .statue[.@i +1], UNPC_HEADBOTTOM, .@head_bottom[.@i];
+		setunitdata .statue[.@i +1], UNPC_ROBE, .@robe[.@i];
+		setnpcdisplay "mvp_ladder_statue#"+(.@i +1), .@name$[.@i];
+		.statue_name$[.@i +1] = .@name$[.@i];
+		.statue_guild$[.@i +1] = getguildname(.@guild_id[.@i]);
+		.statue_kills[.@i +1] = .@kills[.@i];
+	}
+	for (.@i = .@nb; .@i < .showstatue; ++.@i)
+		setunitdata .statue[.@i +1], UNPC_CLASS, HIDDEN_WARP_NPC;
+	initnpctimer;
+	end;
+
+OnNPCKillEvent: // Logic to detect when a MvP is killed
+	if (getmonsterinfo(killedrid, MOB_MVPEXP) > 0) {
+		.@selectIfKillExistQuery$ = "SELECT char_id, mob_id, kills FROM mvpladder WHERE char_id = '" + getcharid(0) + "' AND mob_id = '" + killedrid + "';";
+		if (query_sql(.@selectIfKillExistQuery$) > 0) { // Exist a kill of that MVP so +1 to kill count
+			.@updateLadderQuery$ = "UPDATE mvpladder SET kills = kills + 1 WHERE char_id = '" + getcharid(0) + "' AND mob_id = '" + killedrid + "'";
+		} else { // Create a new kill of specific MVP
+			//.@updateLadderQuery$ = "INSERT INTO mvpladder (char_id, mob_id, kills) VALUES ('" + getcharid(0) + "','" + killedrid + "','1');";
+			.@updateLadderQuery$ = "INSERT INTO mvpladder (`char_id` , `mob_id` , `kills`) VALUES ('" + getcharid(0) + "','" + killedrid + "','1');";
+		}
+		query_sql(.@updateLadderQuery$);
+	}
+	end;
+}
+
+//---- MvP Ladder Info NPC
+
+1@dth3,48,89,5	script	MVP Ladder	120,{
+	.@npcname$ = strnpcinfo(0);
+	while (1) {
+		mes "["+ .@npcname$ +"]";
+		mes "Hello "+ strcharinfo(0) +"...";
+		mes "If you want to I can show you your MVP stats.";
+		next;
+		switch (select("Most MVP killer list","Most MVP killed list","Own Information")) {
+		mes "["+ .@npcname$ +"]";
+		case 1:
+			.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills), t2.name " +
+								 "FROM `mvpladder` t1 " +
+								 "INNER JOIN `char` t2 " +
+								 "ON t1.char_id = t2.char_id " +
+								 "GROUP BY t1.char_id " +
+								 "ORDER BY t1.kills DESC " +
+								 "LIMIT " + getvariableofnpc(.showtotal, "MVPLadder") + ";";
+			.@nb = query_sql(.@queryKillerList$, .@charid, .@kills, .@name$);
+			if (!.@nb) {
+				mes "The ladder currently is empty.";
+				next;
+			}
+			for (.@j = 0; .@j < .@nb; .@j += getvariableofnpc(.showpage,"MVPLadder")) {
+				for (.@i = .@j; .@i < (getvariableofnpc(.showpage,"MVPLadder") + .@j) && .@i < .@nb; ++.@i)
+					mes "^996600" + (.@i+1) + ": ^006699" + .@name$[.@i] + " ^00AA00[^FF0000" + .@kills[.@i] + " MvP^00AA00 killed]^000000";
+				next;
+			}
+			break;
+			
+		case 2:
+			.@queryKilledList$ = "SELECT char_id, mob_id, SUM(kills) " +
+								 "FROM `mvpladder` " +
+								 "GROUP BY mob_id " +
+								 "ORDER BY kills DESC " +
+								 "LIMIT " + getvariableofnpc(.showtotal, "MVPLadder") + ";";
+			.@nb = query_sql(.@queryKilledList$, .@charid, .@mobid, .@kills);
+			if (!.@nb) {
+				mes "The ladder currently is empty.";
+				next;
+			}
+			for (.@j = 0; .@j < .@nb; .@j += getvariableofnpc(.showpage,"MVPLadder")) {
+				for (.@i = .@j; .@i < (getvariableofnpc(.showpage,"MVPLadder") + .@j) && .@i < .@nb; ++.@i) {
+					mes "^996600" + (.@i+1) + ": ^006699" + strmobinfo(1, .@mobid[.@i]) + " ^FF0000MvP ^00AA00[Killed ^FF0000" + .@kills[.@i] + " ^00AA00times]^000000";
+				}
+				next;
+			}
+			query_sql("SELECT SUM(kills) FROM mvpladder;", .@killCount);
+			mes "^996600==> ^006699Total MvP Kills [^FF0000" + .@killCount[0] + " ^00AA00kills]^000000";
+			break;
+			
+		case 3:
+			.@queryOwnLadder$ = "SELECT char_id, mob_id, SUM(kills) " +
+								"FROM `mvpladder` " +
+								"WHERE char_id = '" + getcharid(0) + "'" +
+								"ORDER BY kills DESC;";
+			.@nb = query_sql(.@queryOwnLadder$, .@charid, .@mobid, .@kills);
+			if (!.@nb) {
+				mes "The ladder currently is empty.";
+				next;
+			}
+			.@totalKillCount = 0;
+			for (.@j = 0; .@j < .@nb; .@j += getvariableofnpc(.showpage,"MVPLadder")) {
+				for (.@i = .@j; .@i < (getvariableofnpc(.showpage,"MVPLadder") + .@j) && .@i < .@nb; ++.@i ) {	
+					mes "^996600" + (.@i+1) + ": ^006699" + strmobinfo(1, .@mobid[.@i]) + " ^FF0000MvP ^00AA00[Killed ^FF0000" + .@kills[.@i] + " ^00AA00times]^000000";
+					.@totalKillCount = .@totalKillCount + .@kills[.@i];
+				}
+				next;
+			}
+			mes "^996600==> ^006699Total Own MvP Kills [^FF0000" + .@totalKillCount + " ^00AA00kills]^000000";
+			break;
+        }
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("MVP Ladder");
+	setnpctimer 0;
+	end;
+    }
+close;
+
+}
+
+//---- MSG board NPCs
+
+-	script	mvp_ladder_statue	-1,{
+	.@id = getelementofarray(getvariableofnpc(.npcgid, "MVPLadder"), getnpcid(0));
+	mes "^996600[TOP "+ .@id +"]";
+	mes "^006699Name : "+ getelementofarray(getvariableofnpc(.statue_name$, "MVPLadder"), .@id);
+	.@guildname$ = getelementofarray(getvariableofnpc(.statue_guild$, "MVPLadder"), .@id);
+	mes "^00AAAAGuild : "+((.@guildname$ == "null")? "^AAAAAANone": .@guildname$);
+	mes "^00AA00Total MVP Kills : ["+ getelementofarray(getvariableofnpc(.statue_kills, "MVPLadder"), .@id) +"]";
+	close;
+
+OnInit:
+	.@id = strnpcinfo(2);
+	set getvariableofnpc(.statue[.@id], "MVPLadder"), getnpcid(0);
+	set getvariableofnpc(.npcgid[getnpcid(0)], "MVPLadder"), .@id;
+	end;
+}
+
+1@dth3,55,83,5	duplicate(mvp_ladder_statue)	mvp_ladder_statue#1	1_F_MARIA
+1@dth3,51,83,5	duplicate(mvp_ladder_statue)	mvp_ladder_statue#2	1_F_MARIA
+1@dth3,54,87,5	duplicate(mvp_ladder_statue)	mvp_ladder_statue#3	1_F_MARIA
+1@dth3,54,91,5	duplicate(mvp_ladder_statue)	mvp_ladder_statue#4	1_F_MARIA
+1@dth3,47,83,5	duplicate(mvp_ladder_statue)	mvp_ladder_statue#5	1_F_MARIA
+
+1@dth3,55,83,5	script	 #top1	111,{
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("Top-1 MVP Killer");
+	setnpctimer 0;
+	end;
+}
+
+1@dth3,51,83,5	script	 #top2	111,{
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("Top-2 MVP Killer");
+	setnpctimer 0;
+	end;
+}
+
+1@dth3,54,87,5	script	 #top3	111,{
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("Top-3 MVP Killer");
+	setnpctimer 0;
+	end;
+}
+
+1@dth3,54,91,5	script	 #top4	111,{
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("Top-4 MVP Killer");
+	setnpctimer 0;
+	end;
+}
+
+1@dth3,47,83,5	script	 #top5	111,{
+OnInit:
+	initnpctimer;
+	end;
+OnTimer1000:
+	showscript("Top-5 MVP Killer");
+	setnpctimer 0;
+	end;
+}
