@@ -5,7 +5,7 @@
 //= https://herc.ws/board/topic/18871-dota-pvp-ladder/
 //= Mark Script fixed and adapted some small things
 //===== Current Version: =====================================================
-//= 2.0
+//= 2.1
 //===== Compatible With: =====================================================
 //= rAthena 2020-10-20, with MySQL 8.0
 //===== Description: =========================================================
@@ -14,6 +14,7 @@
 //===== Additional Comments: =================================================
 //= 1.0 initial version
 //= 2.0 added total kill count and fixed some sql bugs
+//= 2.1 fixed sql sorting rank
 //============================================================================
 
 /*
@@ -55,11 +56,11 @@ OnInit:
 	sleep 1;
 	
 OnTimer1000: // refresh statues every 30 seconds. Note the `char` table is unrealiable, player still need to perform certain task to save the character -> see 'save_settings' in conf\map-server.conf
-	.@query$ = "SELECT `char`.`char_id`, `char`.`name`, `char`.`guild_id`, `char`.`class`,"
-			 + "`char`.`sex`, `char`.`hair`, `char`.`hair_color`, `char`.`clothes_color`,"
-			 + "`char`.`body`, `char`.`head_top`, `char`.`head_mid`, `char`.`head_bottom`, `char`.`robe`,"
-	         + "SUM(`mvpladder`.`kills`)"
-	         + "FROM `char` RIGHT JOIN `mvpladder` ON `char`.`char_id` = `mvpladder`.`char_id` GROUP BY `char`.`char_id` ORDER BY `kills` DESC LIMIT "+ .showstatue;
+	.@query$ = "SELECT `char`.`char_id`, `char`.`name`, `char`.`guild_id`, `char`.`class`, "
+			 + "`char`.`sex`, `char`.`hair`, `char`.`hair_color`, `char`.`clothes_color`, "
+			 + "`char`.`body`, `char`.`head_top`, `char`.`head_mid`, `char`.`head_bottom`, `char`.`robe`, "
+	         + "SUM(`mvpladder`.`kills`) as `orderKills` "
+	         + "FROM `char` RIGHT JOIN `mvpladder` ON `char`.`char_id` = `mvpladder`.`char_id` GROUP BY `char`.`char_id` ORDER BY `orderKills` DESC LIMIT " + .showstatue;
 	.@nb = query_sql(.@query$, .@cid, .@name$, .@guild_id, .@class, .@sex$, .@hair, .@hair_color, .@clothes_color, .@body, .@head_top, .@head_mid, .@head_bottom, .@robe, .@kills);
 	if (.fix_custom_sprite) {
 		for (.@i = 0; .@i < .@nb; ++.@i) {
@@ -116,12 +117,12 @@ OnNPCKillEvent: // Logic to detect when a MvP is killed
 		switch (select("Most MVP killer list","Most MVP killed list","Own Information")) {
 		mes "["+ .@npcname$ +"]";
 		case 1:
-			.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills), t2.name " +
+			.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills) as `orderKills`, t2.name " +
 								 "FROM `mvpladder` t1 " +
 								 "INNER JOIN `char` t2 " +
 								 "ON t1.char_id = t2.char_id " +
 								 "GROUP BY t1.char_id " +
-								 "ORDER BY t1.kills DESC " +
+								 "ORDER BY `orderKills` DESC " +
 								 "LIMIT " + getvariableofnpc(.showtotal, "MVPLadder") + ";";
 			.@nb = query_sql(.@queryKillerList$, .@charid, .@kills, .@name$);
 			if (!.@nb) {
@@ -136,10 +137,10 @@ OnNPCKillEvent: // Logic to detect when a MvP is killed
 			break;
 			
 		case 2:
-			.@queryKilledList$ = "SELECT char_id, mob_id, SUM(kills) " +
+			.@queryKilledList$ = "SELECT char_id, mob_id, SUM(kills) as `orderKills` " +
 								 "FROM `mvpladder` " +
 								 "GROUP BY mob_id " +
-								 "ORDER BY kills DESC " +
+								 "ORDER BY `orderKills` DESC " +
 								 "LIMIT " + getvariableofnpc(.showtotal, "MVPLadder") + ";";
 			.@nb = query_sql(.@queryKilledList$, .@charid, .@mobid, .@kills);
 			if (!.@nb) {
@@ -157,10 +158,10 @@ OnNPCKillEvent: // Logic to detect when a MvP is killed
 			break;
 			
 		case 3:
-			.@queryOwnLadder$ = "SELECT char_id, mob_id, SUM(kills) " +
+			.@queryOwnLadder$ = "SELECT char_id, mob_id, SUM(kills) as `orderKills` " +
 								"FROM `mvpladder` " +
 								"WHERE char_id = '" + getcharid(0) + "'" +
-								"ORDER BY kills DESC;";
+								"ORDER BY `orderKills` DESC;";
 			.@nb = query_sql(.@queryOwnLadder$, .@charid, .@mobid, .@kills);
 			if (!.@nb) {
 				mes "The ladder currently is empty.";
