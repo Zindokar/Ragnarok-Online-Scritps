@@ -1,5 +1,5 @@
-# Hercules-Scritps
-Ragnarok Online scripts for Hercules emulator (or compatible)
+# Ragnarok Online Custom Scritps
+Ragnarok Online scripts for Hercules and rAthena emulator (or compatible)
 
 ## Utility Releases:
 
