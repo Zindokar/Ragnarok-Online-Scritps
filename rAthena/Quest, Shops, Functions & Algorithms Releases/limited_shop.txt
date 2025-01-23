@@ -59,7 +59,7 @@ prontera,146,170,3	script	LimitedShop NPC	860,{
         set Zeny, Zeny - .@itemZeny;
         deletearray @bought_quantity, getarraysize(@bought_quantity);
         deletearray @bought_nameid, getarraysize(@bought_nameid);
-        close;
+        end;
 
     OnInit:
         .maxItemQuantity = 3;
