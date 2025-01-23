@@ -1,0 +1,72 @@
+//===== rAthena Script =======================================
+//= Limited Shop
+//===== Description: =========================================
+//= Request: https://rathena.org/board/topic/143699-shop-that-has-purchasing-limit/
+//===== Additional Comments: =================================
+//= Author: Rokimoki
+//============================================================
+-	shop	LimitedShop	-1,501:-1,705:-1,1101:-1
+
+prontera,146,170,3	script	LimitedShop NPC	860,{
+    if (currentAmountBought >= .maxItemQuantity) {
+        .@npcName$ = "[^c77978Limited Shop^000000]";
+        mes .@npcName$;
+        mes "Limit reached " + currentAmountBought + "/" + .maxItemQuantity + " items.";
+        mes "Wait until reset and relog after reset.";
+        close;
+    }
+    callshop "LimitedShop", 1;
+	npcshopattach "LimitedShop";
+	end;
+
+    OnBuyItem:
+        .@npcName$ = "[^c77978Limited Shop^000000]";
+        set .@totalItems, 0;
+        for (.@i = 0; .@i < getarraysize(@bought_nameid); .@i++) {
+            if (@bought_quantity[.@i] <= 0){
+                mes .@npcName$;
+                mes "This shouldn't happen!";
+                close;
+            }
+            set .@totalItems, .@totalItems + @bought_quantity[.@i];
+        }
+        set .@checkTotalItems, currentAmountBought + .@totalItems;
+        if (.@checkTotalItems > .maxItemQuantity) {
+            mes .@npcName$;
+            mes "You are buying too much items!";
+            mes "You picked: " + .@totalItems;
+            mes "Current status: " + currentAmountBought + "/" + .maxItemQuantity;
+            mes "I recommend you to buy one item by one.";
+            close;
+        }
+        set .@itemZeny, 0;
+        for (.@i = 0; .@i < getarraysize(@bought_nameid); .@i++) {
+            set .@itemZeny, .@itemZeny + getiteminfo(@bought_nameid[.@i], ITEMINFO_BUY) * @bought_quantity[.@i];
+        }
+        if (Zeny < .@itemZeny) {
+            mes .@npcName$;
+            mes "You can't afford this shopping cart!";
+            mes "Your Zeny: " + Zeny + " zeny.";
+            mes "Total shopping cart: " + .@itemZeny + " zeny.";
+            set .@zenyNeeded, .@itemZeny - Zeny;
+            mes "You need " + .@zenyNeeded + " more zeny.";
+            close;
+        }
+        for (.@i = 0; .@i < getarraysize(@bought_nameid); .@i++) {
+            getitem @bought_nameid[.@i], @bought_quantity[.@i];
+        }
+        set currentAmountBought, currentAmountBought + .@totalItems;
+        set Zeny, Zeny - .@itemZeny;
+        deletearray @bought_quantity, getarraysize(@bought_quantity);
+        deletearray @bought_nameid, getarraysize(@bought_nameid);
+        close;
+
+    OnInit:
+        .maxItemQuantity = 3;
+        end; 
+    
+    OnClock0600:
+        query_sql("UPDATE `char_reg_num` SET `value` = 0 WHERE `key` = 'currentAmountBought' AND `char_id` <> 0;");
+        npctalk "Shop has been reseted. Relog your character.";
+        end;
+}
