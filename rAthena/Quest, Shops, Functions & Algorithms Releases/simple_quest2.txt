@@ -1,0 +1,94 @@
+//===== rAthena Script =======================================
+//= Simple Quest 2
+//===== Description: =========================================
+//= Request: https://rathena.org/board/topic/143730-r-simple-quest/
+//===== Additional Comments: =================================
+//= Author: Rokimoki
+//============================================================
+-	script	Simple Quest#1	853,{
+    .@npcName$ = "[^c77978Sime Quest NPC^000000]";
+    mes .@npcName$;
+    mes "Hello player, I'm a powerful NPC.";
+    next;
+    if(select("I don't trust you", "Tell me more") == 1) close;
+    mes .@npcName$;
+    mes "Bring me these, first...";
+    for (.@i = 0; .@i < getarraysize(.firstItemList); .@i++) {
+        mes .firstItemAmountList[.@i] + " " + getitemname(.firstItemList[.@i]);
+    }
+    next;
+    if(select("Seems easy.","I can't...") == 2) close;
+    mes .@npcName$;
+    for (.@i = 0; .@i < getarraysize(.firstItemList); .@i++) {
+        if (countitem(.firstItemList[.@i]) < .firstItemAmountList[.@i]) {
+            mes "You don't have enough items.";
+            mes countitem(.firstItemList[.@i]) + " of " + .firstItemAmountList[.@i] + "x " + getitemname(.firstItemList[.@i]);
+            close;
+        }
+    }
+    mes "Ok but...";
+    for (.@i = 0; .@i < getarraysize(.firstItemList); .@i++) {
+        delitem .firstItemList[.@i], .firstItemAmountList[.@i];
+    }
+    next;
+    mes .@npcName$;
+    mes "Ok, now. Bring me those...";
+    for (.@i = 0; .@i < getarraysize(.itemListQuest); .@i++) {
+        mes .itemAmountQuest[.@i] + " " + getitemname(.itemListQuest[.@i]);
+    }
+    next;
+    if(select("I have the items","You are crazy") == 2) close;
+    mes .@npcName$;
+    for (.@i = 0; .@i < getarraysize(.itemListQuest); .@i++) {
+        if (countitem(.itemListQuest[.@i]) < .itemAmountQuest[.@i]) {
+            mes "You don't have enough items.";
+            mes countitem(.itemListQuest[.@i]) + " of " + .itemAmountQuest[.@i] + "x " + getitemname(.itemListQuest[.@i]);
+            close;
+        }
+    }
+    mes "You seems to have the items...";
+    mes "Select your reward.";
+    next;
+    mes .@npcName$;
+    switch(select("Reward 1", "Reward 2", "I regret")) {
+        case 1:
+            @reward = .rewardId1;
+            break;
+        case 2:
+            @reward = .rewardId2;
+            break;
+        case 3:
+            mes "...don't waste my time...";
+            close;
+    }
+    mes "Take it...";
+    for (.@i = 0; .@i < getarraysize(.itemListQuest); .@i++) {
+        delitem .itemListQuest[.@i], .itemAmountQuest[.@i];
+    }
+    getitem @reward, 1;
+    close;
+		
+
+OnInit:
+    setarray(.firstItemList[0],
+        501,
+        607
+    );
+    setarray(.firstItemAmountList[0],
+        10,
+        10
+    );
+    setarray(.itemListQuest[0],
+        607,
+        4128
+    );
+    setarray(.itemAmountQuest[0],
+        10,
+        1
+    );
+    .rewardId1 = 18200;
+    .rewardId2 = 18201;
+	end;
+}
+
+prontera,146,172,3	duplicate(Simple Quest#1)	Simple Quest#2	853
