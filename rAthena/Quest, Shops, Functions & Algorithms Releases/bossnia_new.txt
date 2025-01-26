@@ -40,25 +40,47 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 	switch(select("Talk to Riss","Check Ladder")) {
 		case 1: break;
 		case 2:
-			.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills) as `orderKills`, t2.name " +
-								 "FROM `bossnia_event_ladder` t1 " +
-								 "INNER JOIN `char` t2 " +
-								 "ON t1.char_id = t2.char_id " +
-								 "GROUP BY t1.char_id " +
-								 "ORDER BY `orderKills` DESC " +
-								 "LIMIT " + .eventLadderLimit + ";";
-			.@nb = query_sql(.@queryKillerList$, .@charid, .@kills, .@name$);
-			if (!.@nb) {
-				mes "[Riss]";
-				mes "The ladder currently is empty.";
-				next;
+			mes "[Riss]";
+			mes "What do you need exactly?";
+			next;
+			switch(select("Check Top Ladder","Check personal info")) {
+				case 1:
+					.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills) as `orderKills`, t2.name " +
+										"FROM `bossnia_event_ladder` t1 " +
+										"INNER JOIN `char` t2 " +
+										"ON t1.char_id = t2.char_id " +
+										"GROUP BY t1.char_id " +
+										"ORDER BY `orderKills` DESC " +
+										"LIMIT " + .eventLadderLimit + ";";
+					.@nb = query_sql(.@queryKillerList$, .@charid, .@kills, .@name$);
+					if (!.@nb) {
+						mes "[Riss]";
+						mes "The ladder currently is empty.";
+						close;
+					}
+					for (.@j = 0; .@j < .@nb; .@j += .eventLadderKillerPerPage) {
+						for (.@i = .@j; .@i < .eventLadderKillerPerPage + .@j && .@i < .@nb; ++.@i)
+							mes "^996600" + (.@i+1) + ": ^006699" + .@name$[.@i] + " ^00AA00[^FF0000" + .@kills[.@i] + " MvP^00AA00 killed]^000000";
+						next;
+					}
+					close;
+
+				case 2:
+					.@queryOwnData$ = "SELECT `mob_id`, `kills` FROM `bossnia_event_ladder` WHERE `char_id` = " + getcharid(0) + " ORDER BY `kills` DESC;";
+					.@nb = query_sql(.@queryOwnData$, .@mobId, .@kills);
+					if (!.@nb) {
+						mes "[Riss]";
+						mes "You don't have data.";
+						close;
+					}
+					mes "[Riss]";
+					for (.@i = 0; .@i < .@nb; .@i += 1) {
+						mes "^996600" + (.@i+1) + " ^00AA00[^FF0000" + getmonsterinfo(.@mobId[.@i], MOB_NAME) + "^00AA00]^000000: ^006699" + .@kills[.@i] + "^000000 kills.";
+					}
+					close;
 			}
-			for (.@j = 0; .@j < .@nb; .@j += .eventLadderKillerPerPage) {
-				for (.@i = .@j; .@i < .eventLadderKillerPerPage + .@j && .@i < .@nb; ++.@i)
-					mes "^996600" + (.@i+1) + ": ^006699" + .@name$[.@i] + " ^00AA00[^FF0000" + .@kills[.@i] + " MvP^00AA00 killed]^000000";
-				next;
-			}
-			close;
+
+
 	}
 
 	// Stop using if disabled or permaDisabled
@@ -163,8 +185,9 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		}
 		if (!#bossniaEventCooldown) {
 			#bossniaEventCooldown = gettimetick(2);
-			addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
 		}
+		deltimer strnpcinfo(3) + "::OnCustomTimer";
+		addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
 		specialeffect2 EF_MAXPOWER;
 		warp "bossnia_0"+.@i,.@x,.@y;
 		close;
@@ -183,8 +206,9 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 			close2;
 			if (!#bossniaEventCooldown) {
 				#bossniaEventCooldown = gettimetick(2);
-				addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
 			}
+			deltimer strnpcinfo(3) + "::OnCustomTimer";
+			addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
 			delitem 607,10;
 			warp "bossnia_0"+.@i,201,201;
 			end;
@@ -218,6 +242,9 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 			for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
 				if (.mapList$[.@i] == strcharinfo(3)) {
 					if (getmonsterinfo(killedrid, MOB_MVPEXP) > 0) {
+						dispbottom "You killed: " + getmonsterinfo(killedrid, MOB_NAME) + ".";
+						// Extra point
+						set CHEFFENIAPOINT, CHEFFENIAPOINT + 1;
 						// Update Ladder
 						.@selectIfKillExistQuery$ = "SELECT char_id, mob_id, kills FROM bossnia_event_ladder WHERE char_id = '" + getcharid(0) + "' AND mob_id = '" + killedrid + "';";
 						if (query_sql(.@selectIfKillExistQuery$) > 0) {
@@ -227,15 +254,19 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 						}
 						query_sql(.@updateLadderQuery$);
 						// Getting rare item
-						set .@random, rand(100);
-						if (.@random >= 0 && .@random < 5) { // 5% to success
-							set .@randomItem, rand(1, getarraysize(.rateItemList - 1));
-							getitem .rateItemList[.@randomItem], 1;
+						for (.@j = 0, .@j < getarraysize(.rareItemList); .@j++) {
+							set .@random, rand(100);
+							if (.@random >= 0 && .@random < .rareItemChance[.@j]) {
+								if (.enableRareItemNotification) dispbottom "You got rare item [" + getitemname(.rareItemList[.@j]) + "] with " + .rareItemChance[.@j] + "% chance.";
+								getitem .rareItemList[.@j], 1;
+							}
 						}
+						end;
 					}
 				}
 			}
 		}
+		end;
 
 	// Check each minute to kick players exceeded the cooldown
 	OnCustomTimer:
@@ -245,13 +276,15 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 				if (.mapList$[.@i] == strcharinfo(3)) {
 					dispbottom "[Riss]: You finished your adventure time.";
 					warp "SavePoint", 0, 0;
+					deltimer strnpcinfo(3) + "::OnCustomTimer";
 					end;
 				}
 			}
 			dispbottom "[Riss]: You finished your adventure time.";
+			deltimer strnpcinfo(3) + "::OnCustomTimer";
 			end;
 		}
-		addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
+		addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
 		end;
 	
 	OnPCLoginEvent: // Prevent bugs if a player log outs during permision time
@@ -288,11 +321,16 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		set .npcCoolDownInSeconds, 10800; // 3 hours (10800)
 		set .resetDelayInSeconds, 57600; // 16 hours delay (57600)
 		set .vipItemId, 20001; // To avoid 1 day delay
-		set .rateItemRate, 5; // 5% chance to get one of the below
 		set .enableActivatedAnnounce, 1; // activate a yellow announce broadcast when npc is enabled and disabled
+		set .enableRareItemNotification, 1; // activate personal dispbottom announce that got rare item
 		set .eventLadderLimit, 10; // How much people show
 		set .eventLadderKillerPerPage, 5; // How much per "page"
-		setarray(.rateItemList[0], // Item ID list
+		set .timerTickInMilliseconds, 60000; // 60 seconds timer
+		setarray(.rareItemChance[0], // Chance to get the item, in order like .rareItemList
+			5,
+			2
+		);
+		setarray(.rareItemList[0], // Item ID list
 			607,
 			20000
 		);
@@ -305,12 +343,6 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		bindatcmd "ctime", strnpcinfo(3) + "::OnAtcommand";
 		end;
 }
-
-geffen,124,169,4	duplicate(Bossnia Staff#1)	Bossnia Staff#2	908
-payon,165,150,4	duplicate(Bossnia Staff#1)	Bossnia Staff#3	908
-morocc,142,100,4	duplicate(Bossnia Staff#1)	Bossnia Staff#4	908
-lighthalzen,203,140,4	duplicate(Bossnia Staff#1)	Bossnia Staff#5	908
-rachel,132,144,4	duplicate(Bossnia Staff#1)	Bossnia Staff#6	908
 
 // Warp Portals
 //============================================================
