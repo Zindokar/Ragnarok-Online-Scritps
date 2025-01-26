@@ -3,7 +3,7 @@
 //===== By: ================================================== 
 //= Masao
 //===== Current Version: ===================================== 
-//= 1.3
+//= 1.4
 //===== Compatible With: ===================================== 
 //= rAthena Project
 //===== Description: ========================================= 
@@ -201,7 +201,6 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY) {
 			if (.enableActivatedAnnounce) announce "[Riss]: Office is open, register if you want a new adventure.", 0;
 			.activated = 1;
-			initnpctimer;
 		}
 		end;
 
@@ -210,12 +209,10 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY) {
 			if (.enableActivatedAnnounce) announce "[Riss]: Office is closed, let me take a break.", 0;
 			.activated = 0;
-			stopnpctimer;
 		}
 		end;
 
-
-
+	// ============== CHECK MVP KILLS ==============
 	OnNPCKillEvent:
 		if (.activated) {
 			for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
@@ -288,8 +285,8 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 	OnInit:
 		set .activated, 1; // Don't touch this
 		set .permaDisabled, 0; // Set to 1 so never will be activated until you set to 0 again and reload
-		set .npcCoolDownInSeconds, 10; // 3 hours (10800)
-		set .resetDelayInSeconds, 20; // 16 hours delay (57600)
+		set .npcCoolDownInSeconds, 10800; // 3 hours (10800)
+		set .resetDelayInSeconds, 57600; // 16 hours delay (57600)
 		set .vipItemId, 20001; // To avoid 1 day delay
 		set .rateItemRate, 5; // 5% chance to get one of the below
 		set .enableActivatedAnnounce, 1; // activate a yellow announce broadcast when npc is enabled and disabled
