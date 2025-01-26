@@ -1,0 +1,502 @@
+//===== rAthena Script ======================================= 
+//= Bossnia Warp NPCs
+//===== By: ================================================== 
+//= Masao
+//===== Current Version: ===================================== 
+//= 1.3
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= Bossnia MVP event.
+//===== Additional Comments: ================================= 
+//= 1.0 Converted from the official script.
+//= 1.1 Optimized. [Euphy]
+//= 1.2 Moved spawns and warps (by Masao) to this file. [Euphy]
+//= 1.3 Added VIP features. [Euphy]
+//= 1.4 Added request: https://rathena.org/board/topic/143653-help-bossnia-event-pls/ [Rokimoki]
+//============================================================ 
+
+// Required table
+//============================================================
+/*
+	CREATE TABLE `bossnia_event_ladder` (
+		`id` int(11) NOT NULL AUTO_INCREMENT,
+		`char_id` int(11) unsigned NOT NULL default '0',
+		`mob_id` INT NOT NULL,
+		`kills` INT DEFAULT 0,
+		PRIMARY KEY (`id`),
+		INDEX (`char_id`),
+		INDEX (`mob_id`),
+		INDEX (`kills`)
+	) ENGINE=MyISAM AUTO_INCREMENT=1;
+*/
+
+// Entrance NPCs
+//============================================================
+prontera,132,125,4	script	Bossnia Staff#1	908,{
+	mes "[Riss]";
+	mes "...";
+	next;
+	switch(select("Talk to Riss","Check Ladder")) {
+		case 1: break;
+		case 2:
+			.@queryKillerList$ = "SELECT t1.char_id, SUM(t1.kills) as `orderKills`, t2.name " +
+								 "FROM `bossnia_event_ladder` t1 " +
+								 "INNER JOIN `char` t2 " +
+								 "ON t1.char_id = t2.char_id " +
+								 "GROUP BY t1.char_id " +
+								 "ORDER BY `orderKills` DESC " +
+								 "LIMIT " + .eventLadderLimit + ";";
+			.@nb = query_sql(.@queryKillerList$, .@charid, .@kills, .@name$);
+			if (!.@nb) {
+				mes "[Riss]";
+				mes "The ladder currently is empty.";
+				next;
+			}
+			for (.@j = 0; .@j < .@nb; .@j += .eventLadderKillerPerPage) {
+				for (.@i = .@j; .@i < .eventLadderKillerPerPage + .@j && .@i < .@nb; ++.@i)
+					mes "^996600" + (.@i+1) + ": ^006699" + .@name$[.@i] + " ^00AA00[^FF0000" + .@kills[.@i] + " MvP^00AA00 killed]^000000";
+				next;
+			}
+			close;
+	}
+
+	// Stop using if disabled or permaDisabled
+	if (.permaDisabled || !.activated) {
+		mes "[Riss]";
+		mes "We are closed! I'm on my free time.";
+		mes "Open on weekends from 10am to 5pm.";
+		close;
+	}
+
+	// Reset after delay countdown
+	if (gettimetick(2) - #bossniaEventCooldown > .resetDelayInSeconds) {
+		set #bossniaEventCooldown, 0;
+	}
+
+	// Stop using system if passed 3 hours after used
+	if (#bossniaEventCooldown && gettimetick(2) - #bossniaEventCooldown >= .npcCoolDownInSeconds && !countitem(.vipItemId)) {
+		mes "[Riss]";
+		mes "Oops, you spent already 3 hours...";
+		mes "Come back next time!";
+		close;
+	}
+
+	mes "[Riss]";
+	mes "Hello?";
+	mes "I found some beautiful places";
+	mes "while I travelled all over the world.";
+	mes "I am an adventurer.";
+	mes "Haha~";
+	next;
+	mes "[Riss]";
+	mes "What? My name is...";
+	mes "'Bossnia Staff'?? No no...";
+	mes "Well, my name is not so important.";
+	mes "Sometimes you should be generous.";
+	mes "No time for considering that kind of small stuff";
+	mes "when you have to concentrate on more important things.";
+	next;
+	mes "[Riss]";
+	mes "Hum... anyway I want to say... something..";
+	mes "While I was travelling through some places,";
+	mes "I found a really fearful place.";
+	next;
+	mes "[Riss]";
+	mes "Most of the time when you come to a place,";
+	mes "there is one strong and fearful monster.";
+	mes "Isn't it?";
+	next;
+	mes "[Riss]";
+	mes "But... but... in there...";
+	mes "There are lots of fearful and strong monsters in there...";
+	mes "That was really frightful.";
+	next;
+	mes "[Riss]";
+	mes "If I had reacted a bit later... a few seconds...";
+	mes "I might have been killed.";
+	next;
+	mes "[Riss]";
+	mes "What?";
+	mes "You want to go in there?";
+	mes "Oh~ Boy~ you didn't get me.";
+	mes "In there.......";
+	next;
+	mes "[Riss]";
+	mes "Uh... you already know?";
+	mes "Although you know the place, you want to go in...";
+	mes "Good, I will send you there.";
+	mes "But after you went there, don't hold";
+
+	// If the VIP system is enabled, players pay a Reset Stone for 5 entrances (with a choice of warps).
+	// If it's disabled, players pay 5,000z per entrance.
+	if (VIP_SCRIPT) {
+		mes "a grudge against me. It'll cost you 1 Reset Stone for 5 access.";
+		next;
+		mes "[Riss]";
+		if (bossnia_event > 0) {
+			set .@type,1;
+			mes "Remaining access: "+ bossnia_event;
+		} else if (countitem(6320)) {
+			set .@type,2;
+			mes "Do you want to go?";
+		} else {
+			mes "You don't have a ticket now.....";
+			mes "So come to me again with a Reset Stone later.";
+			close;
+		}
+		next;
+		if(select("Enter:Leave") == 2)
+			close;
+		set .@i, select("First:Second:Third:Fourth");
+		switch(select("Warp 1:Warp 2:Warp 3:Warp 4")) {
+			case 1: set .@x,31; set .@y,208; break;
+			case 2: set .@x,31; set .@y,31; break;
+			case 3: set .@x,208; set .@y,31; break;
+			case 4: set .@x,208; set .@y,208; break;
+		}
+		if (.@type == 1)
+			set bossnia_event, bossnia_event - 1;
+		else {
+			delitem 6320,1; //Premium_Reset_Stone
+			set bossnia_event, 4;
+		}
+		if (!#bossniaEventCooldown) {
+			#bossniaEventCooldown = gettimetick(2);
+			addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
+		}
+		specialeffect2 EF_MAXPOWER;
+		warp "bossnia_0"+.@i,.@x,.@y;
+		close;
+	} else {
+		mes "a grudge against me. Also it costs 10 yggdrasil berry.";
+		next;
+		if( countitem( 607 ) >= 10 ){
+			mes "[Riss]";
+			mes "Would you really like to take the challenge?";
+			mes "Ok, just choose the course.";
+			next;
+			set .@i, select("First:Second:Third:Fourth");
+			mes "[Riss]";
+			mes "Take care, boy~";
+			mes "Don't hold a grudge against me.";
+			close2;
+			if (!#bossniaEventCooldown) {
+				#bossniaEventCooldown = gettimetick(2);
+				addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
+			}
+			delitem 607,10;
+			warp "bossnia_0"+.@i,201,201;
+			end;
+		} else {
+			mes "[Riss]";
+			mes "You don't have enough money...";
+			mes "Come back when you have at least 10 yggdrasil berry.";
+			close;
+		}
+	}
+
+	// ============== ENABLE NPC ==============
+	OnClock1000: // at 10am on Weekend
+		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY) {
+			if (.enableActivatedAnnounce) announce "[Riss]: Office is open, register if you want a new adventure.", 0;
+			.activated = 1;
+			initnpctimer;
+		}
+		end;
+
+	// ============== DISABLE NPC ==============
+	OnClock1700: // at 5pm on Weekend
+		if (gettime(GETTIME_WEEKDAY) == SATURDAY || gettime(GETTIME_WEEKDAY) == SUNDAY) {
+			if (.enableActivatedAnnounce) announce "[Riss]: Office is closed, let me take a break.", 0;
+			.activated = 0;
+			stopnpctimer;
+		}
+		end;
+
+
+
+	OnNPCKillEvent:
+		if (.activated) {
+			for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
+				if (.mapList$[.@i] == strcharinfo(3)) {
+					if (getmonsterinfo(killedrid, MOB_MVPEXP) > 0) {
+						// Update Ladder
+						.@selectIfKillExistQuery$ = "SELECT char_id, mob_id, kills FROM bossnia_event_ladder WHERE char_id = '" + getcharid(0) + "' AND mob_id = '" + killedrid + "';";
+						if (query_sql(.@selectIfKillExistQuery$) > 0) {
+							.@updateLadderQuery$ = "UPDATE bossnia_event_ladder SET kills = kills + 1 WHERE char_id = '" + getcharid(0) + "' AND mob_id = '" + killedrid + "'";
+						} else {
+							.@updateLadderQuery$ = "INSERT INTO bossnia_event_ladder (`char_id` , `mob_id` , `kills`) VALUES ('" + getcharid(0) + "','" + killedrid + "','1');";
+						}
+						query_sql(.@updateLadderQuery$);
+						// Getting rare item
+						set .@random, rand(100);
+						if (.@random >= 0 && .@random < 5) { // 5% to success
+							set .@randomItem, rand(1, getarraysize(.rateItemList - 1));
+							getitem .rateItemList[.@randomItem], 1;
+						}
+					}
+				}
+			}
+		}
+
+	// Check each minute to kick players exceeded the cooldown
+	OnCustomTimer:
+		set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
+		if (.@secondsCount >= .npcCoolDownInSeconds) {
+			for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
+				if (.mapList$[.@i] == strcharinfo(3)) {
+					dispbottom "[Riss]: You finished your adventure time.";
+					warp "SavePoint", 0, 0;
+					end;
+				}
+			}
+			dispbottom "[Riss]: You finished your adventure time.";
+			end;
+		}
+		addtimer 1000, strnpcinfo(3) + "::OnCustomTimer";
+		end;
+	
+	OnPCLoginEvent: // Prevent bugs if a player log outs during permision time
+		for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
+			if (.mapList$[.@i] == strcharinfo(3)) {
+				set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
+				if (.@secondsCount >= .npcCoolDownInSeconds) {
+					dispbottom "[Riss]: You finished your adventure time.";
+					warp "SavePoint", 0, 0;
+					end;
+				}
+			}
+		}
+		end;
+
+	// ============== Checking countdown with @ctime ==============
+	OnAtcommand:
+		if (.activated) {
+			set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
+			if (.@secondsCount < .npcCoolDownInSeconds) {
+				set .@secondsLeft, .npcCoolDownInSeconds - .@secondsCount;
+				set .@hours, .@secondsLeft / 3600;
+				set .@minutes, (.@secondsLeft % 3600) / 60;
+				set .@seconds, .@secondsLeft % 60;
+				dispbottom "Time remaining: " + .@hours + " hours " + .@minutes + " minutes " + .@seconds + " seconds left.";
+			}
+		}
+		end;
+
+	// ============== NPC CONFIGURATION ==============
+	OnInit:
+		set .activated, 1; // Don't touch this
+		set .permaDisabled, 0; // Set to 1 so never will be activated until you set to 0 again and reload
+		set .npcCoolDownInSeconds, 10; // 3 hours (10800)
+		set .resetDelayInSeconds, 20; // 16 hours delay (57600)
+		set .vipItemId, 20001; // To avoid 1 day delay
+		set .rateItemRate, 5; // 5% chance to get one of the below
+		set .enableActivatedAnnounce, 1; // activate a yellow announce broadcast when npc is enabled and disabled
+		set .eventLadderLimit, 10; // How much people show
+		set .eventLadderKillerPerPage, 5; // How much per "page"
+		setarray(.rateItemList[0], // Item ID list
+			607,
+			20000
+		);
+		setarray(.mapList$[0], // Map list, to make easier to script
+			"bossnia_01",
+			"bossnia_02",
+			"bossnia_03",
+			"bossnia_04"
+		);
+		bindatcmd "ctime", strnpcinfo(3) + "::OnAtcommand";
+		end;
+}
+
+geffen,124,169,4	duplicate(Bossnia Staff#1)	Bossnia Staff#2	908
+payon,165,150,4	duplicate(Bossnia Staff#1)	Bossnia Staff#3	908
+morocc,142,100,4	duplicate(Bossnia Staff#1)	Bossnia Staff#4	908
+lighthalzen,203,140,4	duplicate(Bossnia Staff#1)	Bossnia Staff#5	908
+rachel,132,144,4	duplicate(Bossnia Staff#1)	Bossnia Staff#6	908
+
+// Warp Portals
+//============================================================
+bossnia_01,204,204,0	warp	bossnia01	1,1,prontera,155,180
+bossnia_02,204,204,0	warp	bossnia02	1,1,prontera,155,180
+bossnia_03,204,204,0	warp	bossnia03	1,1,prontera,155,180
+bossnia_04,204,204,0	warp	bossnia04	1,1,prontera,155,180
+
+// Monster Spawns
+//============================================================
+
+//----------------------------------------------------------------------------
+// bossnia_01 - Bossnia
+//----------------------------------------------------------------------------
+bossnia_01,0,0	monster	Garm	1252,5,7200000
+bossnia_01,0,0	monster	Gloom Under Night	1768,2,7200000
+bossnia_01,0,0	monster	Dark Lord	1272,3,7200000
+bossnia_01,0,0	monster	Doppelganger	1046,10,7200000
+bossnia_01,0,0	monster	Dracula	1389,5,1800000
+bossnia_01,0,0	monster	Drake	1112,10,1800000
+bossnia_01,0,0	monster	Detale	1719,2,7200000
+bossnia_01,0,0	monster	Maya	1147,10,1800000
+bossnia_01,0,0	monster	Mistress	1059,1,1800000
+//bossnia_01,0,0	monster	Baphomet	1039,10,1800000
+bossnia_01,0,0	monster	Egnigem Cenia	1658,10,1800000
+bossnia_01,0,0	monster	Amon Ra	1511,1,1800000
+bossnia_01,0,0	monster	Atroce	1785,10,1800000
+bossnia_01,0,0	monster	Vesper	1685,2,7200000
+bossnia_01,0,0	monster	Eddga	1115,1,1800000
+bossnia_01,0,0	monster	Osiris	1038,10,7200000
+bossnia_01,0,0	monster	Orc Lord	1190,10,7200000
+bossnia_01,0,0	monster	Orc Hero	1087,2,1800000
+bossnia_01,0,0	monster	Samurai Specter	1492,1,3600000
+bossnia_01,0,0	monster	Moonlight Flower	1150,1,3600000
+bossnia_01,0,0	monster	Lord of the Dead	1373,1,3600000
+bossnia_01,0,0	monster	Ktullanux	1779,2,7200000
+bossnia_01,0,0	monster	Kiel D-01	1734,2,7200000
+bossnia_01,0,0	monster	Thanatos Phantom	1708,2,7200000
+bossnia_01,0,0	monster	Lady Tanee	1688,1,3600000
+bossnia_01,0,0	monster	Tao Gunka	1583,1,3600000
+bossnia_01,0,0	monster	Turtle General	1312,10,7200000
+bossnia_01,0,0	monster	Pharaoh	1157,2,3600000
+bossnia_01,0,0	monster	Stormy Knight	1251,2,3600000
+bossnia_01,0,0	monster	Falling Bishop	1871,5,7200000
+bossnia_01,0,0	monster	Phreeoni	1159,10,7200000
+bossnia_01,0,0	monster	Golden Thief Bug	1086,10,3600000
+bossnia_01,0,0	monster	Evil Snake Lord	1418,10,7200000
+bossnia_01,0,0	monster	RSX-0806	1623,5,7200000
+bossnia_01,0,0	monster	Assassin Cross Eremes	1647,1
+bossnia_01,137,118,1,1	monster	Whitesmith Howard	1648,1
+bossnia_01,122,195,1,1	monster	Beelzebub	1873,1
+bossnia_01,45,118,1,1	monster	Beelzebub	1873,1
+bossnia_01,196,122,1,1	monster	Valkyrie Randgris	1751,1
+bossnia_01,142,61,1,1	monster	Ifrit	1832,1
+
+//----------------------------------------------------------------------------
+// bossnia_02 - Bossnia
+//----------------------------------------------------------------------------
+bossnia_02,0,0	monster	Garm	1252,5,7200000
+bossnia_02,0,0	monster	Gloom Under Night	1768,2,7200000
+bossnia_02,0,0	monster	Dark Lord	1272,3,7200000
+bossnia_02,0,0	monster	Doppelganger	1046,10,7200000
+bossnia_02,0,0	monster	Dracula	1389,5,1800000
+bossnia_02,0,0	monster	Drake	1112,10,1800000
+bossnia_02,0,0	monster	Detale	1719,2,7200000
+bossnia_02,0,0	monster	Maya	1147,10,1800000
+bossnia_02,0,0	monster	Mistress	1059,1,1800000
+//bossnia_02,0,0	monster	Baphomet	1039,10,1800000
+bossnia_02,0,0	monster	Egnigem Cenia	1658,10,1800000
+bossnia_02,0,0	monster	Amon Ra	1511,1,1800000
+bossnia_02,0,0	monster	Atroce	1785,10,1800000
+bossnia_02,0,0	monster	Vesper	1685,2,7200000
+bossnia_02,0,0	monster	Eddga	1115,1,1800000
+bossnia_02,0,0	monster	Osiris	1038,10,7200000
+bossnia_02,0,0	monster	Orc Lord	1190,10,7200000
+bossnia_02,0,0	monster	Orc Hero	1087,2,1800000
+bossnia_02,0,0	monster	Samurai Specter	1492,1,3600000
+bossnia_02,0,0	monster	Moonlight Flower	1150,1,3600000
+bossnia_02,0,0	monster	Lord of the Dead	1373,1,3600000
+bossnia_02,0,0	monster	Ktullanux	1779,2,7200000
+bossnia_02,0,0	monster	Kiel D-01	1734,2,7200000
+bossnia_02,0,0	monster	Thanatos Phantom	1708,2,7200000
+bossnia_02,0,0	monster	Lady Tanee	1688,1,3600000
+bossnia_02,0,0	monster	Tao Gunka	1583,1,3600000
+bossnia_02,0,0	monster	Turtle General	1312,10,7200000
+bossnia_02,0,0	monster	Pharaoh	1157,2,3600000
+bossnia_02,0,0	monster	Stormy Knight	1251,2,3600000
+bossnia_02,0,0	monster	Falling Bishop	1871,5,7200000
+bossnia_02,0,0	monster	Phreeoni	1159,10,7200000
+bossnia_02,0,0	monster	Golden Thief Bug	1086,10,3600000
+bossnia_02,0,0	monster	Evil Snake Lord	1418,10,7200000
+bossnia_02,0,0	monster	RSX-0806	1623,5,7200000
+bossnia_02,0,0	monster	Assassin Cross Eremes	1647,1
+bossnia_02,137,118,1,1	monster	Whitesmith Howard	1648,1
+bossnia_02,122,195,1,1	monster	Beelzebub	1873,1
+bossnia_02,45,118,1,1	monster	Beelzebub	1873,1
+bossnia_02,196,122,1,1	monster	Valkyrie Randgris	1751,1
+bossnia_02,142,61,1,1	monster	Ifrit	1832,1
+
+//----------------------------------------------------------------------------
+// bossnia_03 - Bossnia
+//----------------------------------------------------------------------------
+bossnia_03,0,0	monster	Garm	1252,5,7200000
+bossnia_03,0,0	monster	Gloom Under Night	1768,2,7200000
+bossnia_03,0,0	monster	Dark Lord	1272,3,7200000
+bossnia_03,0,0	monster	Doppelganger	1046,10,7200000
+bossnia_03,0,0	monster	Dracula	1389,5,1800000
+bossnia_03,0,0	monster	Drake	1112,10,1800000
+bossnia_03,0,0	monster	Detale	1719,2,7200000
+bossnia_03,0,0	monster	Maya	1147,10,1800000
+bossnia_03,0,0	monster	Mistress	1059,1,1800000
+//bossnia_03,0,0	monster	Baphomet	1039,10,1800000
+bossnia_03,0,0	monster	Egnigem Cenia	1658,10,1800000
+bossnia_03,0,0	monster	Amon Ra	1511,1,1800000
+bossnia_03,0,0	monster	Atroce	1785,10,1800000
+bossnia_03,0,0	monster	Vesper	1685,2,7200000
+bossnia_03,0,0	monster	Eddga	1115,1,1800000
+bossnia_03,0,0	monster	Osiris	1038,10,7200000
+bossnia_03,0,0	monster	Orc Lord	1190,10,7200000
+bossnia_03,0,0	monster	Orc Hero	1087,2,1800000
+bossnia_03,0,0	monster	Samurai Specter	1492,1,3600000
+bossnia_03,0,0	monster	Moonlight Flower	1150,1,3600000
+bossnia_03,0,0	monster	Lord of the Dead	1373,1,3600000
+bossnia_03,0,0	monster	Ktullanux	1779,2,7200000
+bossnia_03,0,0	monster	Kiel D-01	1734,2,7200000
+bossnia_03,0,0	monster	Thanatos Phantom	1708,2,7200000
+bossnia_03,0,0	monster	Lady Tanee	1688,1,3600000
+bossnia_03,0,0	monster	Tao Gunka	1583,1,3600000
+bossnia_03,0,0	monster	Turtle General	1312,10,7200000
+bossnia_03,0,0	monster	Pharaoh	1157,2,3600000
+bossnia_03,0,0	monster	Stormy Knight	1251,2,3600000
+bossnia_03,0,0	monster	Falling Bishop	1871,5,7200000
+bossnia_03,0,0	monster	Phreeoni	1159,10,7200000
+bossnia_03,0,0	monster	Golden Thief Bug	1086,10,3600000
+bossnia_03,0,0	monster	Evil Snake Lord	1418,10,7200000
+bossnia_03,0,0	monster	RSX-0806	1623,5,7200000
+bossnia_03,0,0	monster	Assassin Cross Eremes	1647,1
+bossnia_03,137,118,1,1	monster	Whitesmith Howard	1648,1
+bossnia_03,122,195,1,1	monster	Beelzebub	1873,1
+bossnia_03,45,118,1,1	monster	Beelzebub	1873,1
+bossnia_03,196,122,1,1	monster	Valkyrie Randgris	1751,1
+bossnia_03,142,61,1,1	monster	Ifrit	1832,1
+
+//----------------------------------------------------------------------------
+// bossnia_04 - Bossnia
+//----------------------------------------------------------------------------
+bossnia_04,0,0	monster	Garm	1252,5,7200000
+bossnia_04,0,0	monster	Gloom Under Night	1768,2,7200000
+bossnia_04,0,0	monster	Dark Lord	1272,3,7200000
+bossnia_04,0,0	monster	Doppelganger	1046,10,7200000
+bossnia_04,0,0	monster	Dracula	1389,5,1800000
+bossnia_04,0,0	monster	Drake	1112,10,1800000
+bossnia_04,0,0	monster	Detale	1719,2,7200000
+bossnia_04,0,0	monster	Maya	1147,10,1800000
+bossnia_04,0,0	monster	Mistress	1059,1,1800000
+//bossnia_04,0,0	monster	Baphomet	1039,10,1800000
+bossnia_04,0,0	monster	Egnigem Cenia	1658,10,1800000
+bossnia_04,0,0	monster	Amon Ra	1511,1,1800000
+bossnia_04,0,0	monster	Atroce	1785,10,1800000
+bossnia_04,0,0	monster	Vesper	1685,2,7200000
+bossnia_04,0,0	monster	Eddga	1115,1,1800000
+bossnia_04,0,0	monster	Osiris	1038,10,7200000
+bossnia_04,0,0	monster	Orc Lord	1190,10,7200000
+bossnia_04,0,0	monster	Orc Hero	1087,2,1800000
+bossnia_04,0,0	monster	Samurai Specter	1492,1,3600000
+bossnia_04,0,0	monster	Moonlight Flower	1150,1,3600000
+bossnia_04,0,0	monster	Lord of the Dead	1373,1,3600000
+bossnia_04,0,0	monster	Ktullanux	1779,2,7200000
+bossnia_04,0,0	monster	Kiel D-01	1734,2,7200000
+bossnia_04,0,0	monster	Thanatos Phantom	1708,2,7200000
+bossnia_04,0,0	monster	Lady Tanee	1688,1,3600000
+bossnia_04,0,0	monster	Tao Gunka	1583,1,3600000
+bossnia_04,0,0	monster	Turtle General	1312,10,7200000
+bossnia_04,0,0	monster	Pharaoh	1157,2,3600000
+bossnia_04,0,0	monster	Stormy Knight	1251,2,3600000
+bossnia_04,0,0	monster	Falling Bishop	1871,5,7200000
+bossnia_04,0,0	monster	Phreeoni	1159,10,7200000
+bossnia_04,0,0	monster	Golden Thief Bug	1086,10,3600000
+bossnia_04,0,0	monster	Evil Snake Lord	1418,10,7200000
+bossnia_04,0,0	monster	RSX-0806	1623,5,7200000
+bossnia_04,0,0	monster	Assassin Cross Eremes	1647,1
+bossnia_04,137,118,1,1	monster	Whitesmith Howard	1648,1
+bossnia_04,122,195,1,1	monster	Beelzebub	1873,1
+bossnia_04,45,118,1,1	monster	Beelzebub	1873,1
+bossnia_04,196,122,1,1	monster	Valkyrie Randgris	1751,1
+bossnia_04,142,61,1,1	monster	Ifrit	1832,1
