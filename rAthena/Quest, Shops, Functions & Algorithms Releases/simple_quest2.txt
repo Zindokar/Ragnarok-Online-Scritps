@@ -5,7 +5,7 @@
 //===== Additional Comments: =================================
 //= Author: Rokimoki
 //============================================================
--	script	Simple Quest#1	853,{
+-	script	Simple Quest 2#1	853,{
     .@npcName$ = "[^c77978Sime Quest NPC^000000]";
     mes .@npcName$;
     mes "Hello player, I'm a powerful NPC.";
@@ -22,7 +22,7 @@
     for (.@i = 0; .@i < getarraysize(.firstItemList); .@i++) {
         if (countitem(.firstItemList[.@i]) < .firstItemAmountList[.@i]) {
             mes "You don't have enough items.";
-            mes countitem(.firstItemList[.@i]) + " of " + .firstItemAmountList[.@i] + "x " + getitemname(.firstItemList[.@i]);
+            mes countitem(.firstItemList[.@i]) + "x of " + .firstItemAmountList[.@i] + "x " + getitemname(.firstItemList[.@i]);
             close;
         }
     }
@@ -42,7 +42,7 @@
     for (.@i = 0; .@i < getarraysize(.itemListQuest); .@i++) {
         if (countitem(.itemListQuest[.@i]) < .itemAmountQuest[.@i]) {
             mes "You don't have enough items.";
-            mes countitem(.itemListQuest[.@i]) + " of " + .itemAmountQuest[.@i] + "x " + getitemname(.itemListQuest[.@i]);
+            mes countitem(.itemListQuest[.@i]) + "x of " + .itemAmountQuest[.@i] + "x " + getitemname(.itemListQuest[.@i]);
             close;
         }
     }
@@ -91,4 +91,4 @@ OnInit:
 	end;
 }
 
-prontera,146,172,3	duplicate(Simple Quest#1)	Simple Quest#2	853
+prontera,148,172,3	duplicate(Simple Quest 2#1)	Simple Quest 2#2	853
