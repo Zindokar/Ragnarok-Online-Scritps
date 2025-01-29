@@ -316,7 +316,7 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 
 	// ============== NPC CONFIGURATION ==============
 	OnInit:
-		set .activated, 1; // Don't touch this
+		set .activated, 0; // Don't touch this
 		set .permaDisabled, 0; // Set to 1 so never will be activated until you set to 0 again and reload
 		set .npcCoolDownInSeconds, 10800; // 3 hours (10800)
 		set .resetDelayInSeconds, 57600; // 16 hours delay (57600)
