@@ -149,7 +149,23 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 	mes "Although you know the place, you want to go in...";
 	mes "Good, I will send you there.";
 	mes "But after you went there, don't hold";
+	next;
+	
+	set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
+	if (.@secondsCount < .npcCoolDownInSeconds) { // check if activated yet or not
+		set .@secondsLeft, .npcCoolDownInSeconds - .@secondsCount;
+		set .@hours, .@secondsLeft / 3600;
+		set .@minutes, (.@secondsLeft % 3600) / 60;
+		set .@seconds, .@secondsLeft % 60;
+		mes "[Riss]";
+		mes "Further information, time remaining: ";
+		mes "^00AA00" + .@hours + "^000000 hours";
+		mes "^00AA00" + .@minutes + "^000000 minutes ";
+		mes "^00AA00" + .@seconds + "^000000 seconds left.";
+		next;
+	}
 
+	mes "[Riss]";
 	// If the VIP system is enabled, players pay a Reset Stone for 5 entrances (with a choice of warps).
 	// If it's disabled, players pay 5,000z per entrance.
 	if (VIP_SCRIPT) {
@@ -185,6 +201,7 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		}
 		if (!#bossniaEventCooldown) {
 			#bossniaEventCooldown = gettimetick(2);
+			if (.activateIcon) bonus_script "{ bonus bStr, 1; }", .npcCoolDownInSeconds, 512, 0, .iconTemplate;
 		}
 		deltimer strnpcinfo(3) + "::OnCustomTimer";
 		addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
@@ -206,6 +223,7 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 			close2;
 			if (!#bossniaEventCooldown) {
 				#bossniaEventCooldown = gettimetick(2);
+				if (.activateIcon) bonus_script "{ bonus bStr, 1; }", .npcCoolDownInSeconds, 512, 0, .iconTemplate;
 			}
 			deltimer strnpcinfo(3) + "::OnCustomTimer";
 			addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
@@ -326,6 +344,8 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		set .eventLadderLimit, 10; // How much people show
 		set .eventLadderKillerPerPage, 5; // How much per "page"
 		set .timerTickInMilliseconds, 60000; // 60 seconds timer
+		set .activateIcon, 1; // Activated icon 0 disable 1 enable
+		set .iconTemplate, EFST_PROVOKE; // This will show client description, you should add custom icon for this
 		setarray(.rareItemChance[0], // Chance to get the item, in order like .rareItemList
 			5,
 			2
