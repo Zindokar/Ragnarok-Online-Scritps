@@ -1,0 +1,154 @@
+//===== rAthena Script =======================================
+//= Floating rates with donations
+//===== By: ==================================================
+//= Emistry ???
+//===== Current Version: =====================================
+//= 1.1 Updating to request: https://rathena.org/board/topic/143735-emistry-floating-rates [Rokimoki]
+//============================================================
+
+prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
+    mes "[Super Floating Rates]";
+    set .@currentExpRates, getbattleflag("base_exp_rate") / 100;
+    set .@currentJobRates, getbattleflag("job_exp_rate") / 100;
+    if (.eventActivated) {
+        mes "EXP bonus already started, you cant donate now.";
+        mes "Current rates. Exp: ^0C5C00" + .@currentExpRates + "x^000000 Job: ^0C5C00" + .@currentJobRates + "x^000000.";
+        mes "Base rates. Exp: ^FF0000" + (.baseExpRate / 100)  + "x^000000 Job: ^FF0000" + (.baseJobRate / 100)+ "x^000000.";
+        close;
+    }
+    dispbottom "$floatingRatesCooldown " + $floatingRatesCooldown;
+    dispbottom ".npcCoolDown " + .npcCoolDown;
+    dispbottom "gettimetick(2) " + gettimetick(2);
+    if ($floatingRatesCooldown + .npcCoolDown > gettimetick(2)) {
+        mes "NPC in Cooldown you can't vote for now.";
+        mes "Current rates. Exp: ^0C5C00" + .@currentExpRates + "x^000000 Job: ^0C5C00" + .@currentJobRates + "x^000000.";
+        set .@secondsLeft, $floatingRatesCooldown + .npcCoolDown - gettimetick(2);
+        set .@hours, .@secondsLeft / 3600;
+        set .@minutes, (.@secondsLeft % 3600) / 60;
+        set .@seconds, .@secondsLeft % 60;
+        mes "You can vote again in: " + .@hours + " hours " + .@minutes + " minutes " + .@seconds + " seconds left.";
+        close;
+    }
+    mes "Donate zeny boost EXP?";
+    mes "Required Donation: ^0C5C00" + F_InsertComma(.zenyAimLimit) + "^000000z";
+    mes "Current Donation: ^FF0000" + F_InsertComma($zenyDonated) + "^000000z";
+    mes " ";
+    mes "Current rates. Exp: ^0C5C00" + .@currentExpRates + "x^000000 Job: ^0C5C00" + .@currentJobRates + "x^000000.";
+    mes "Base rates. Exp: ^FF0000" + (.baseExpRate / 100) + "x^000000 Job: ^FF0000" + (.baseJobRate / 100) + "x^000000.";
+    next;
+    if (select("Continue", "Cancel") == 2) close;
+    mes "[Super Floating Rates]";
+    mes "Minimum Donation: ^C97200" + F_InsertComma(.minimunDonation) + "^000000z";
+    mes "Maximum Donation: ^C97200" + F_InsertComma(.maximumDonation) + "^000000z";
+    mes "Input zeny donation: ";
+    input .@zeny, 0, Zeny; // lets user decide
+    next;
+    if (.@zeny < .minimunDonation || .@zeny > .maximumDonation) { // check donations range
+        mes "[Super Floating Rates]";
+        mes "Minimum Donation: ^C97200" + F_InsertComma(.minimunDonation) + "^000000z";
+        mes "Maximum Donation: ^C97200" + F_InsertComma(.maximumDonation) + "^000000z";
+        mes "You selected: ^FF0000" + F_InsertComma(.@zeny) + "^000000z";
+        close;
+    }
+    Zeny -= .@zeny;
+    $zenyDonated += .@zeny;
+    mes "[Super Floating Rates]";
+    mes "You donated ^0C5C00" + F_InsertComma(.@zeny) + "^000000z";
+    if (.enableBuffing) {
+        set .@donatedPortion, .@zeny / .minimunDonation;
+        set .@buffTime, .@donatedPortion * .increaseBuffTimeInMilliseconds;
+        specialeffect2 EF_HEAL2;
+        percentheal 100, 100;
+        specialeffect2 EF_INCAGILITY;
+        sc_start SC_INCREASEAGI, .@buffTime, 10;
+        specialeffect2 EF_BLESSING;
+        sc_start SC_BLESSING, .@buffTime, 10;
+    }
+    if ($zenyDonated >= .zenyAimLimit) { // Reached donation limit, event start
+        set $floatingRatesCooldown, 0;
+        set $floatingRatesStartTime, gettimetick(2);
+        donpcevent strnpcinfo(3)+"::OnRatesStart";
+    }
+    close;
+ 
+    OnInit:
+        set .eventActivated, 0; // Don't touch this
+
+        set .minimunDonation, 10000; // Minimum zeny donation
+        set .maximumDonation, 80000; // Maximum zeny donation
+
+        set .enableBuffing, 1; // Agi and bless every donation
+        set .increaseBuffTimeInMilliseconds, 60000; // 1 minute every minimumDonation portion, for example if min is 10k and donate 22k, buff duration is 2 minutes
+
+        // Set manually to avoid bugs while reloading script or server
+        set .baseExpRate, 100; // Base server exp rate 100 = 1x
+        set .baseJobRate, 100;  // Base server job rate 100 = 1x
+        set .minimumRateIncrease, 100 * 6; // Minimum rate increase
+        set .maximumRateIncrease, 100 * 10; // Maximum rate increase
+        
+        set .zenyAimLimit, 0; // Don't touch this
+        set .@serverZenyTargetPercentage, 10; // Total server zeny for activation
+        query_sql("SELECT SUM(`value`) as `Zeny` FROM `acc_reg_num` WHERE `key` = '#BANKVAULT';", .@totalBankZeny);
+        query_sql("SELECT SUM(`zeny`) as `Zeny` FROM `char`;", .@totalPlayerZeny);
+        set .@totalServerZeny, .@totalBankZeny + .@totalPlayerZeny;
+        set .@initialZenyLimit, .@totalServerZeny * .@serverZenyTargetPercentage / 100; // serverZenyTargetPercentage of totalServerZeny
+        if (.zenyAimLimit <= .@initialZenyLimit) { // Refresh zeny aim Limit
+            set .zenyAimLimit, .@initialZenyLimit; // Update zeny limit
+        }
+        
+        set .dailyDuration, 3 * 60 * 60; // 3 hours
+        set .npcCoolDown, 24 * 60 * 60; // 24 hours
+        
+        bindatcmd "floatingrates", strnpcinfo(3) + "::OnAtRatesCommand";
+
+        set .@secondsCount, gettimetick(2) - $floatingRatesStartTime;
+        if (.@secondsCount <= .dailyDuration) { // if reload or crash during event on
+            set .eventActivated, 1;
+            callsub(L_rate);
+            initnpctimer;
+        }
+        end;
+    
+    OnAtRatesCommand: // @floatingrates
+        if (.eventActivated) {
+            set .@secondsCount, gettimetick(2) - $floatingRatesStartTime;
+            if (.@secondsCount <= .dailyDuration) {
+                set .@secondsLeft, .dailyDuration - .@secondsCount;
+                set .@hours, .@secondsLeft / 3600;
+                set .@minutes, (.@secondsLeft % 3600) / 60;
+                set .@seconds, .@secondsLeft % 60;
+                dispbottom "Time remaining: " + .@hours + " hours " + .@minutes + " minutes " + .@seconds + " seconds left.";
+            }
+            set .@currentExpRates, getbattleflag("base_exp_rate") / 100;
+            set .@currentJobRates, getbattleflag("job_exp_rate") / 100;
+            dispbottom "Current rates are: Exp: " + .@currentExpRates + "x / Job: " + .@currentJobRates + "x";
+        }
+        end;
+
+    OnTimer3600000: // Every 60 minutes, change the interval here
+    OnRatesStart: // Event Start
+        stopnpctimer;
+        set .@secondsCount, gettimetick(2) - $floatingRatesStartTime;
+        if (.@secondsCount <= .dailyDuration) {
+            set .eventActivated, 1;
+            set $newExpRate, rand(.minimumRateIncrease, .maximumRateIncrease);
+            set $newJobRate, rand(.minimumRateIncrease, .maximumRateIncrease);
+            callsub(L_rate);
+            initnpctimer;
+        } else {
+            set .eventActivated, 0;
+            set $newExpRate, .baseExpRate;
+            set $newJobRate, .baseJobRate;
+            set $floatingRatesCooldown, gettimetick(2);
+            set $zenyDonated, 0;
+            callsub(L_rate);
+        }
+        end;
+    
+    L_rate: // Function to change rates
+        setbattleflag("base_exp_rate", $newExpRate);
+        setbattleflag("job_exp_rate", $newJobRate);
+        atcommand "@reloadmobdb";
+        announce "Current rates are: Exp: " + ($newExpRate / 100) + "x / Job: " + ($newJobRate / 100) + "x ", bc_all, 0xFF6060;
+        return;
+}
