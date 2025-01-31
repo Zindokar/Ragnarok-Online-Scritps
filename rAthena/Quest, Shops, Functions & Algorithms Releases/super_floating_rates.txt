@@ -16,9 +16,6 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
         mes "Base rates. Exp: ^FF0000" + (.baseExpRate / 100)  + "x^000000 Job: ^FF0000" + (.baseJobRate / 100)+ "x^000000.";
         close;
     }
-    dispbottom "$floatingRatesCooldown " + $floatingRatesCooldown;
-    dispbottom ".npcCoolDown " + .npcCoolDown;
-    dispbottom "gettimetick(2) " + gettimetick(2);
     if ($floatingRatesCooldown + .npcCoolDown > gettimetick(2)) {
         mes "NPC in Cooldown you can't vote for now.";
         mes "Current rates. Exp: ^0C5C00" + .@currentExpRates + "x^000000 Job: ^0C5C00" + .@currentJobRates + "x^000000.";
