@@ -306,6 +306,12 @@ prontera,132,125,4	script	Bossnia Staff#1	908,{
 		end;
 	
 	OnPCLoginEvent: // Prevent bugs if a player log outs during permision time
+		if (.activated) {
+			set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
+			if (.@secondsCount < .npcCoolDownInSeconds) {
+				addtimer .timerTickInMilliseconds, strnpcinfo(3) + "::OnCustomTimer";
+			}
+		}
 		for (.@i = 0; .@i < getarraysize(.mapList$); .@i++) {
 			if (.mapList$[.@i] == strcharinfo(3)) {
 				set .@secondsCount, gettimetick(2) - #bossniaEventCooldown;
