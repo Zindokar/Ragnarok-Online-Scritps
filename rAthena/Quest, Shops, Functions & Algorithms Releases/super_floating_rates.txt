@@ -67,6 +67,14 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
     if ($zenyDonated >= .zenyAimLimit) { // Reached donation limit, event start
         set $floatingRatesCooldown, 0;
         set $floatingRatesStartTime, gettimetick(2);
+        set $zenyDonated, 0;
+        query_sql("SELECT SUM(`value`) as `Zeny` FROM `acc_reg_num` WHERE `key` = '#BANKVAULT';", .@totalBankZeny);
+        query_sql("SELECT SUM(`zeny`) as `Zeny` FROM `char`;", .@totalPlayerZeny);
+        set .@totalServerZeny, .@totalBankZeny + .@totalPlayerZeny;
+        set .@initialZenyLimit, .@totalServerZeny * .@serverZenyTargetPercentage / 100; // serverZenyTargetPercentage of totalServerZeny
+        if (.zenyAimLimit <= .@initialZenyLimit) { // Refresh zeny aim Limit
+            set .zenyAimLimit, .@initialZenyLimit; // Update zeny limit
+        }
         donpcevent strnpcinfo(3)+"::OnRatesStart";
     }
     close;
@@ -140,7 +148,6 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
             set $newExpRate, .baseExpRate;
             set $newJobRate, .baseJobRate;
             set $floatingRatesCooldown, gettimetick(2);
-            set $zenyDonated, 0;
             callsub(L_rate);
         }
         end;
