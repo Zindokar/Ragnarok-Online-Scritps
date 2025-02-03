@@ -101,8 +101,8 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
             set .zenyAimLimit, .@initialZenyLimit; // Update zeny limit
         }
         
-        set .dailyDuration, 3 * 60 * 60; // 3 hours
-        set .npcCoolDown, 24 * 60 * 60; // 24 hours
+        set .dailyDuration, 10800; // 3 hours (10800)
+        set .npcCoolDown, 86400; // 24 hours (86400)
         
         bindatcmd "floatingrates", strnpcinfo(3) + "::OnAtRatesCommand";
 
@@ -130,7 +130,7 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
         }
         end;
 
-    OnTimer3600000: // Every 60 minutes, change the interval here
+    OnTimer3600000: // Every 60 minutes (3600000), change the interval here (milliseconds)
     OnRatesStart: // Event Start
         stopnpctimer;
         set .@secondsCount, gettimetick(2) - $floatingRatesStartTime;
