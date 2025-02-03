@@ -11,7 +11,7 @@ Ragnarok Online scripts for Hercules and rAthena emulator (or compatible)
 
 ## Event & Game Releases:
 
-- none yet
+- I'm completing forums request in rAthena, so check rAthena folder!
 
 ## Quest, Shops, Functions & Algorithms Releases:
 
