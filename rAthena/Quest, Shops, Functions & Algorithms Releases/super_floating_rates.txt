@@ -65,13 +65,6 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
         set $floatingRatesCooldown, 0;
         set $floatingRatesStartTime, gettimetick(2);
         set $zenyDonated, 0;
-        query_sql("SELECT SUM(`value`) as `Zeny` FROM `acc_reg_num` WHERE `key` = '#BANKVAULT';", .@totalBankZeny);
-        query_sql("SELECT SUM(`zeny`) as `Zeny` FROM `char`;", .@totalPlayerZeny);
-        set .@totalServerZeny, .@totalBankZeny + .@totalPlayerZeny;
-        set .@initialZenyLimit, .@totalServerZeny * .@serverZenyTargetPercentage / 100; // serverZenyTargetPercentage of totalServerZeny
-        if (.zenyAimLimit <= .@initialZenyLimit) { // Refresh zeny aim Limit
-            set .zenyAimLimit, .@initialZenyLimit; // Update zeny limit
-        }
         donpcevent strnpcinfo(3)+"::OnRatesStart";
     }
     close;
@@ -92,14 +85,8 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
         set .maximumRateIncrease, 100 * 10; // Maximum rate increase
         
         set .zenyAimLimit, 0; // Don't touch this
-        set .@serverZenyTargetPercentage, 10; // Total server zeny for activation
-        query_sql("SELECT SUM(`value`) as `Zeny` FROM `acc_reg_num` WHERE `key` = '#BANKVAULT';", .@totalBankZeny);
-        query_sql("SELECT SUM(`zeny`) as `Zeny` FROM `char`;", .@totalPlayerZeny);
-        set .@totalServerZeny, .@totalBankZeny + .@totalPlayerZeny;
-        set .@initialZenyLimit, .@totalServerZeny * .@serverZenyTargetPercentage / 100; // serverZenyTargetPercentage of totalServerZeny
-        if (.zenyAimLimit <= .@initialZenyLimit) { // Refresh zeny aim Limit
-            set .zenyAimLimit, .@initialZenyLimit; // Update zeny limit
-        }
+        set .serverZenyTargetPercentage, 10; // Total server zeny for activation
+        callsub(L_calculate_zeny_limit);
         
         set .dailyDuration, 10800; // 3 hours (10800)
         set .npcCoolDown, 86400; // 24 hours (86400)
@@ -145,10 +132,19 @@ prontera,155,181,5	script	Super Floating Rates	4_F_KAFRA1,{
             set $newExpRate, .baseExpRate;
             set $newJobRate, .baseJobRate;
             set $floatingRatesCooldown, gettimetick(2);
+            callsub(L_calculate_zeny_limit);
             callsub(L_rate);
         }
         end;
     
+    L_calculate_zeny_limit: // Update zeny aim limit
+        query_sql("SELECT SUM(`value`) as `Zeny` FROM `acc_reg_num` WHERE `key` = '#BANKVAULT';", .@totalBankZeny);
+        query_sql("SELECT SUM(`zeny`) as `Zeny` FROM `char`;", .@totalPlayerZeny);
+        set .@totalServerZeny, .@totalBankZeny + .@totalPlayerZeny;
+        set .zenyAimLimit, .@totalServerZeny * .serverZenyTargetPercentage / 100; // serverZenyTargetPercentage of totalServerZeny
+        npctalk "New required donation: " + F_InsertComma(.zenyAimLimit) + "z";
+        return;
+
     L_rate: // Function to change rates
         setbattleflag("base_exp_rate", $newExpRate);
         setbattleflag("job_exp_rate", $newJobRate);
